@@ -9,7 +9,7 @@ clock = pygame.time.Clock()
 
 window_size = (800, 600)
 screen = pygame.display.set_mode(window_size)
-
+font = pygame.font.Font(None, 80)
 
 def grid(surface, size, color=(255, 0, 0)):
     'Draws a line every "size" pixels'
@@ -35,12 +35,12 @@ class Alfajor:
     image = pygame.transform.smoothscale(image, (40, 40))
     size = image.get_size()
     
-    def __init__(self, pos=[400,0]):
+    def __init__(self, pos=[400,0], speed=4):
         self.pos = pos
         self.alive = True
         self.rect = pygame.Rect(self.pos[0], self.pos[1], Alfajor.size[0], Alfajor.size[1])
         self.image = Alfajor.image
-        self.speed = 4
+        self.speed = speed
         
     def resize(self, size):
         'Resizes the image and the hitbox'
@@ -57,11 +57,11 @@ class Alfajor:
         self.update()
         
 class Player:
-    def __init__(self):
+    def __init__(self, pos=[0,0]):
         self.path_to_sprite = "sprites/SurpriseRacc.png"
         self.image = pygame.image.load(self.path_to_sprite)
         self.size = self.image.get_size()
-        self.pos = [0, 0]
+        self.pos = pos
         self.rect = pygame.Rect(self.pos[0], self.pos[1], self.size[0], self.size[1])
         self.resize((64, 57))
         self.speed = 8
@@ -101,65 +101,71 @@ class Player:
             self.pos[1] += speed
             
         self.update()
-            
-class Game:
-    def __init__(self, quantity = 10, speed = 4):
-        self.quantity = quantity
-        self.speed = speed
-        self.alfajores = list()
-        
-    def spawn(self, pos):
-        self.alfajores(Alfajor(pos))
-        
-    
-racc = Player()
-racc.pos[1] = 600 - racc.size[1]
-racc.update()
 
-snacc = Alfajor()
+racc = Player(pos=[400, 600-57])
+SNACCS = [Alfajor()]
+gameover_text = font.render('Game Over!', True, 'pink')
+game_over = False
+score = 0
+i = 0
+def get_snacc_pos():
+    return [random.randint(40, 560), 0]
+
+def get_snacc_speed():
+    if not score:
+        return 4
+    return 4+score if score < 8 else 12
 
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             quit()
-            
+
     key = pygame.key.get_pressed()
-        
+
     if key[pygame.K_a]:
         racc.move('Left')
-        
+
     if key[pygame.K_d]:
         racc.move('Right')
-        
+
     if key[pygame.K_LSHIFT]:
         racc.running = True
-        
+
     else:
         racc.running = False
-        
-        
+
     ### GAME LOGIC 
-    if snacc.alive:
+    for snacc in SNACCS:
         snacc.move()
-        
         if racc.rect.colliderect(snacc.rect):
-            snacc.alive = False
-    
-    
+            SNACCS.remove(snacc)
+            SNACCS.append(Alfajor(pos=get_snacc_pos(), speed=get_snacc_speed()))
+            score += 1
+        
+        if snacc.pos[1] > 600:
+            game_over = True
+
+
     ### BACKGROUND
-    screen.fill(colors.grey3)
-    grid(screen, 40, colors.grey2)
-    
+    screen.fill(colors.blue)
+    grid(screen, 40, colors.icy)
+
     ### CHARACTERS
     #pygame.draw.rect(screen, colors.yellow, racc.rect)
     screen.blit(racc.image, racc.pos)
-    
+
     ## OBJECTS
-    if snacc.alive:
-        #pygame.draw.rect(screen, colors.yellow, snacc.rect)
-        screen.blit(snacc.image, snacc.rect)
-    
+    for snacc in SNACCS:
+            #pygame.draw.rect(screen, colors.yellow, snacc.rect)
+            screen.blit(snacc.image, snacc.rect)
+
+    ## TEXT
+    if game_over:
+        score_text = font.render(f'Your score: {score}', True, 'white')
+        screen.blit(gameover_text, [100, 100])
+        screen.blit(score_text, [100, 300])
+
     pygame.display.flip()
     clock.tick(60)
-    
